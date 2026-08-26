@@ -2,13 +2,18 @@ import { useState, useEffect } from "react";
 import { supabase } from "./lib/supabase";
 import AuthScreen from "./AuthScreen.jsx";
 import Dashboard from "./Dashboard.jsx";
+import ResetPassword from "./ResetPassword.jsx";
 
 export default function App() {
   const [session, setSession] = useState(undefined);
+  const [resetMode, setResetMode] = useState(window.location.hash.includes("reset-password"));
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, sess) => setSession(sess));
+    const { data: listener } = supabase.auth.onAuthStateChange((event, sess) => {
+      setSession(sess);
+      if (event === "PASSWORD_RECOVERY") setResetMode(true);
+    });
     return () => listener.subscription.unsubscribe();
   }, []);
 
@@ -18,6 +23,10 @@ export default function App() {
         loading…
       </div>
     );
+  }
+
+  if (resetMode) {
+    return <ResetPassword onDone={() => { setResetMode(false); window.location.hash = ""; }} />;
   }
 
   return session ? <Dashboard session={session} /> : <AuthScreen />;
