@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "./lib/supabase";
 
@@ -8,6 +8,25 @@ export default function ResetPassword({ onDone }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    async function establishSession() {
+      const hash = window.location.hash;
+      const params = new URLSearchParams(hash.includes("?") ? hash.split("?")[1] : hash.replace("#", ""));
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
+      if (access_token && refresh_token) {
+        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+        if (error) setError(error.message);
+      } else {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) setError("This reset link is invalid or has expired. Request a new one from the sign-in screen.");
+      }
+      setReady(true);
+    }
+    establishSession();
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -24,7 +43,7 @@ export default function ResetPassword({ onDone }) {
       <div className="fade-in" style={{width:"100%",maxWidth:380}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:32,justifyContent:"center"}}>
           <div style={{width:38,height:38,borderRadius:9,background:"#c9a55c",display:"flex",alignItems:"center",justifyContent:"center",color:"#12151a",fontWeight:800,fontSize:18}}>₹</div>
-          <div className="display" style={{fontSize:22,fontWeight:700}}>Ledger</div>
+          <div className="display" style={{fontSize:22,fontWeight:700}}>AS-Ledger</div>
         </div>
 
         {done ? (
@@ -34,6 +53,8 @@ export default function ResetPassword({ onDone }) {
               Continue to Ledger
             </button>
           </div>
+        ) : !ready ? (
+          <div style={{textAlign:"center",color:"#6b7280",fontSize:13}} className="mono">verifying link…</div>
         ) : (
           <form onSubmit={handleSubmit}>
             <div style={{fontWeight:700,fontSize:16,marginBottom:16}}>Set a new password</div>
