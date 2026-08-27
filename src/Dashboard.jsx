@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Download, X, AlertTriangle, RotateCcw, LogOut } from "lucide-react";
+import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Download, FileText, X, AlertTriangle, RotateCcw, LogOut } from "lucide-react";
 import { supabase } from "./lib/supabase";
 import { useLang } from "./lib/LangContext";
 import LangSwitch from "./LangSwitch.jsx";
+import Events from "./Events.jsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const CATEGORIES = ["Food", "Transport", "Rent", "Utilities", "Health", "Shopping", "Education", "Entertainment", "Other"];
 const INCOME_CATEGORIES = ["Salary", "Allowance", "Freelance", "Gift", "Other"];
@@ -96,6 +99,33 @@ export default function Dashboard({ session }) {
     URL.revokeObjectURL(url);
   }
 
+  function exportPDF() {
+    const monthExpenses = [...monthEntries].filter(e => e.type === "expense").sort((a,b) => a.date.localeCompare(b.date));
+    const [y, mo] = selectedMonth.split("-");
+    const monthLabel = `${MONTH_NAMES[+mo-1]} ${y}`;
+
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(`${t.appName} - Expenses`, 14, 18);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(monthLabel, 14, 25);
+
+    autoTable(doc, {
+      startY: 32,
+      head: [["Date", "Category", "Note", "Amount (Rs.)"]],
+      body: monthExpenses.map(e => [e.date, e.category, e.note || "-", Number(e.amount).toLocaleString("en-IN")]),
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [201, 165, 92], textColor: [18, 21, 26] },
+      columnStyles: { 3: { halign: "right" } },
+      foot: [["", "", "Total", monthExpense.toLocaleString("en-IN")]],
+      footStyles: { fillColor: [26, 30, 37], textColor: [232, 230, 224], fontStyle: "bold" },
+      columnStylesFoot: { 3: { halign: "right" } },
+    });
+
+    doc.save(`${t.appName}-expenses-${selectedMonth}.pdf`);
+  }
+
   if (!loaded) {
     return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#12151a",color:"#6b7280"}} className="mono">loading ledger…</div>;
   }
@@ -130,7 +160,7 @@ export default function Dashboard({ session }) {
       )}
 
       <nav style={{display:"flex",gap:2,padding:"0 24px",borderBottom:"1px solid #232830"}}>
-        {[["overview",t.overview],["transactions",t.transactions],["budgets",t.budgets]].map(([key,label]) => (
+        {[["overview",t.overview],["transactions",t.transactions],["budgets",t.budgets],["events","Events"]].map(([key,label]) => (
           <button key={key} onClick={() => setTab(key)}
             style={{padding:"12px 4px",marginRight:20,background:"none",border:"none",color: tab===key ? "#e8e6e0" : "#6b7280",
               borderBottom: tab===key ? "2px solid #c9a55c" : "2px solid transparent",fontSize:13,fontWeight:600}}>
@@ -203,9 +233,14 @@ export default function Dashboard({ session }) {
                 </div>
               ))}
             </div>
-            <button onClick={exportCSV} style={{marginTop:16,display:"flex",alignItems:"center",gap:6,background:"none",border:"1px solid #2a2f38",color:"#8a9199",padding:"8px 14px",borderRadius:8,fontSize:12}}>
-              <Download size={13}/> {t.exportCSV}
-            </button>
+            <div style={{display:"flex",gap:8,marginTop:16}}>
+              <button onClick={exportCSV} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"1px solid #2a2f38",color:"#8a9199",padding:"8px 14px",borderRadius:8,fontSize:12}}>
+                <Download size={13}/> {t.exportCSV}
+              </button>
+              <button onClick={exportPDF} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"1px solid #2a2f38",color:"#8a9199",padding:"8px 14px",borderRadius:8,fontSize:12}}>
+                <FileText size={13}/> Export PDF
+              </button>
+            </div>
           </div>
         )}
 
@@ -227,13 +262,15 @@ export default function Dashboard({ session }) {
             </div>
           </div>
         )}
+
+        {tab === "events" && <Events session={session} />}
       </main>
 
-      <button onClick={() => setShowForm(true)}
+      {tab !== "events" && <button onClick={() => setShowForm(true)}
         style={{position:"fixed",bottom:24,right:24,width:56,height:56,borderRadius:"50%",background:"#c9a55c",border:"none",
           display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(201,165,92,0.35)"}}>
         <Plus size={24} color="#12151a" />
-      </button>
+      </button>}
 
       {showForm && <EntryForm onClose={() => setShowForm(false)} onSave={addEntry} t={t} />}
     </div>
