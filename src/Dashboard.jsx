@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Download, X, AlertTriangle, RotateCcw, LogOut } from "lucide-react";
 import { supabase } from "./lib/supabase";
+import { useLang } from "./lib/LangContext";
+import LangSwitch from "./LangSwitch.jsx";
 
 const CATEGORIES = ["Food", "Transport", "Rent", "Utilities", "Health", "Shopping", "Education", "Entertainment", "Other"];
 const INCOME_CATEGORIES = ["Salary", "Allowance", "Freelance", "Gift", "Other"];
@@ -10,6 +12,7 @@ function monthKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padSt
 function fmt(n) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n); }
 
 export default function Dashboard({ session }) {
+  const { t } = useLang();
   const [entries, setEntries] = useState([]);
   const [budgets, setBudgets] = useState({});
   const [loaded, setLoaded] = useState(false);
@@ -103,11 +106,12 @@ export default function Dashboard({ session }) {
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{width:34,height:34,borderRadius:8,background:"#c9a55c",display:"flex",alignItems:"center",justifyContent:"center",color:"#12151a",fontWeight:800}}>₹</div>
           <div>
-            <div className="display" style={{fontWeight:700,fontSize:16}}>Ledger</div>
+            <div className="display" style={{fontWeight:700,fontSize:16}}>{t.appName}</div>
             <div className="mono" style={{fontSize:11,color:"#6b7280"}}>{displayName}</div>
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <LangSwitch />
           <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
             className="mono" style={{background:"#1a1e25",border:"1px solid #2a2f38",color:"#e8e6e0",padding:"8px 12px",borderRadius:8,fontSize:13}}>
             {months.map(m => {
@@ -126,11 +130,11 @@ export default function Dashboard({ session }) {
       )}
 
       <nav style={{display:"flex",gap:2,padding:"0 24px",borderBottom:"1px solid #232830"}}>
-        {["overview","transactions","budgets"].map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            style={{padding:"12px 4px",marginRight:20,background:"none",border:"none",color: tab===t ? "#e8e6e0" : "#6b7280",
-              borderBottom: tab===t ? "2px solid #c9a55c" : "2px solid transparent",fontSize:13,fontWeight:600,textTransform:"capitalize"}}>
-            {t}
+        {[["overview",t.overview],["transactions",t.transactions],["budgets",t.budgets]].map(([key,label]) => (
+          <button key={key} onClick={() => setTab(key)}
+            style={{padding:"12px 4px",marginRight:20,background:"none",border:"none",color: tab===key ? "#e8e6e0" : "#6b7280",
+              borderBottom: tab===key ? "2px solid #c9a55c" : "2px solid transparent",fontSize:13,fontWeight:600}}>
+            {label}
           </button>
         ))}
       </nav>
@@ -139,9 +143,9 @@ export default function Dashboard({ session }) {
         {tab === "overview" && (
           <div className="fade-in">
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:24}}>
-              <StatCard icon={<TrendingUp size={16}/>} label="Income" value={fmt(monthIncome)} color="#6fcf97" />
-              <StatCard icon={<TrendingDown size={16}/>} label="Expenses" value={fmt(monthExpense)} color="#e07856" />
-              <StatCard icon={<Wallet size={16}/>} label="Net" value={fmt(netSavings)} color={netSavings>=0?"#6fcf97":"#e07856"} />
+              <StatCard icon={<TrendingUp size={16}/>} label={t.income} value={fmt(monthIncome)} color="#6fcf97" />
+              <StatCard icon={<TrendingDown size={16}/>} label={t.expenses} value={fmt(monthExpense)} color="#e07856" />
+              <StatCard icon={<Wallet size={16}/>} label={t.net} value={fmt(netSavings)} color={netSavings>=0?"#6fcf97":"#e07856"} />
             </div>
 
             {totalBudget > 0 && (
@@ -151,8 +155,8 @@ export default function Dashboard({ session }) {
               </div>
             )}
 
-            <div style={{fontSize:13,color:"#8a9199",marginBottom:10,fontWeight:600}}>By category</div>
-            {categoryTotals.length === 0 && <EmptyNote text="No expenses logged this month yet." />}
+            <div style={{fontSize:13,color:"#8a9199",marginBottom:10,fontWeight:600}}>{t.byCategory}</div>
+            {categoryTotals.length === 0 && <EmptyNote text={t.noExpenses} />}
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {categoryTotals.map(([cat,amt]) => {
                 const budget = budgets[cat];
@@ -169,7 +173,7 @@ export default function Dashboard({ session }) {
                     <div style={{height:5,background:"#232830",borderRadius:3,overflow:"hidden"}}>
                       <div style={{height:"100%",width:`${Math.min(pct,100)}%`,background:"#c9a55c",borderRadius:3}} />
                     </div>
-                    {over && <div style={{fontSize:11,color:"#e07856",marginTop:6,display:"flex",alignItems:"center",gap:4}}><AlertTriangle size={11}/> over budget by {fmt(amt-budget)}</div>}
+                    {over && <div style={{fontSize:11,color:"#e07856",marginTop:6,display:"flex",alignItems:"center",gap:4}}><AlertTriangle size={11}/> {t.overBudgetBy} {fmt(amt-budget)}</div>}
                   </div>
                 );
               })}
@@ -179,7 +183,7 @@ export default function Dashboard({ session }) {
 
         {tab === "transactions" && (
           <div className="fade-in">
-            {monthEntries.length === 0 && <EmptyNote text="Nothing logged for this month. Add your first entry." />}
+            {monthEntries.length === 0 && <EmptyNote text={t.nothingLogged} />}
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               {[...monthEntries].sort((a,b) => b.date.localeCompare(a.date)).map(e => (
                 <div key={e.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"11px 14px"}}>
@@ -200,14 +204,14 @@ export default function Dashboard({ session }) {
               ))}
             </div>
             <button onClick={exportCSV} style={{marginTop:16,display:"flex",alignItems:"center",gap:6,background:"none",border:"1px solid #2a2f38",color:"#8a9199",padding:"8px 14px",borderRadius:8,fontSize:12}}>
-              <Download size={13}/> Export all as CSV
+              <Download size={13}/> {t.exportCSV}
             </button>
           </div>
         )}
 
         {tab === "budgets" && (
           <div className="fade-in">
-            <div style={{fontSize:13,color:"#8a9199",marginBottom:12,fontWeight:600}}>Monthly limits by category</div>
+            <div style={{fontSize:13,color:"#8a9199",marginBottom:12,fontWeight:600}}>{t.monthlyLimits}</div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {CATEGORIES.map(cat => (
                 <div key={cat} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"10px 14px"}}>
@@ -231,7 +235,7 @@ export default function Dashboard({ session }) {
         <Plus size={24} color="#12151a" />
       </button>
 
-      {showForm && <EntryForm onClose={() => setShowForm(false)} onSave={addEntry} />}
+      {showForm && <EntryForm onClose={() => setShowForm(false)} onSave={addEntry} t={t} />}
     </div>
   );
 }
@@ -262,7 +266,7 @@ function EmptyNote({ text }) {
   return <div style={{padding:"32px 0",textAlign:"center",color:"#6b7280",fontSize:13}}>{text}</div>;
 }
 
-function EntryForm({ onClose, onSave }) {
+function EntryForm({ onClose, onSave, t }) {
   const [type, setType] = useState("expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(CATEGORIES[0]);
@@ -285,36 +289,36 @@ function EntryForm({ onClose, onSave }) {
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:50}}>
       <div className="fade-in" style={{background:"#1a1e25",border:"1px solid #232830",borderTopLeftRadius:16,borderTopRightRadius:16,width:"100%",maxWidth:480,padding:20,maxHeight:"90vh",overflowY:"auto"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-          <div style={{fontWeight:700,fontSize:15}}>New entry</div>
+          <div style={{fontWeight:700,fontSize:15}}>{t.newEntry}</div>
           <button onClick={onClose} style={{background:"none",border:"none",color:"#6b7280"}}><X size={18}/></button>
         </div>
 
         <div style={{display:"flex",gap:8,marginBottom:16}}>
-          {["expense","income"].map(t => (
-            <button key={t} onClick={() => { setType(t); setCategory(t==="income"?INCOME_CATEGORIES[0]:CATEGORIES[0]); }}
-              style={{flex:1,padding:"9px 0",borderRadius:8,border:"1px solid " + (type===t ? "#c9a55c" : "#2a2f38"),
-                background: type===t ? "rgba(201,165,92,0.12)" : "transparent",color: type===t ? "#c9a55c" : "#8a9199",fontWeight:600,fontSize:13,textTransform:"capitalize"}}>
-              {t}
+          {["expense","income"].map(ty => (
+            <button key={ty} onClick={() => { setType(ty); setCategory(ty==="income"?INCOME_CATEGORIES[0]:CATEGORIES[0]); }}
+              style={{flex:1,padding:"9px 0",borderRadius:8,border:"1px solid " + (type===ty ? "#c9a55c" : "#2a2f38"),
+                background: type===ty ? "rgba(201,165,92,0.12)" : "transparent",color: type===ty ? "#c9a55c" : "#8a9199",fontWeight:600,fontSize:13,textTransform:"capitalize"}}>
+              {ty === "income" ? t.income : t.expenses}
             </button>
           ))}
         </div>
 
-        <Field label="Amount">
+        <Field label={t.amount}>
           <input type="number" min="0" autoFocus value={amount} onChange={e => setAmount(e.target.value)} placeholder="0"
             className="mono" style={inputStyle} />
         </Field>
 
-        <Field label="Category">
+        <Field label={t.category}>
           <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
             {cats.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </Field>
 
-        <Field label="Note (optional)">
+        <Field label={t.note}>
           <input value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. groceries at store" style={inputStyle} />
         </Field>
 
-        <Field label="Date">
+        <Field label={t.date}>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} className="mono" style={inputStyle} />
         </Field>
 
@@ -322,11 +326,11 @@ function EntryForm({ onClose, onSave }) {
           <div style={{width:16,height:16,borderRadius:4,border:"1px solid #2a2f38",background: recurring ? "#c9a55c" : "transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
             {recurring && <RotateCcw size={10} color="#12151a"/>}
           </div>
-          Repeats monthly on this day
+          {t.repeatsMonthly}
         </button>
 
         <button onClick={handleSubmit} disabled={saving} style={{width:"100%",padding:"13px 0",borderRadius:10,background:"#c9a55c",border:"none",color:"#12151a",fontWeight:700,fontSize:14,opacity:saving?0.6:1}}>
-          {saving ? "Saving…" : `Add ${type}`}
+          {saving ? "…" : `${t.add} ${type === "income" ? t.income : t.expenses}`}
         </button>
       </div>
     </div>
