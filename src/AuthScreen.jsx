@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "./lib/supabase";
+import { useLang } from "./lib/LangContext";
+import LangSwitch from "./LangSwitch.jsx";
 
 export default function AuthScreen() {
+  const { t } = useLang();
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +26,7 @@ export default function AuthScreen() {
         redirectTo: window.location.origin + "/#reset-password",
       });
       if (error) setError(error.message);
-      else setNotice("Check your email for a password reset link.");
+      else setNotice(t.resetPasswordBody);
       setBusy(false);
       return;
     }
@@ -44,11 +47,12 @@ export default function AuthScreen() {
   }
 
   return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#12151a",padding:20}}>
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#12151a",padding:20,position:"relative"}}>
+      <div style={{position:"absolute",top:16,right:16}}><LangSwitch /></div>
       <div className="fade-in" style={{width:"100%",maxWidth:380}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:32,justifyContent:"center"}}>
           <div style={{width:38,height:38,borderRadius:9,background:"#c9a55c",display:"flex",alignItems:"center",justifyContent:"center",color:"#12151a",fontWeight:800,fontSize:18}}>₹</div>
-          <div className="display" style={{fontSize:22,fontWeight:700}}>Ledger</div>
+          <div className="display" style={{fontSize:22,fontWeight:700}}>{t.appName}</div>
         </div>
 
         {mode !== "reset" && (
@@ -57,7 +61,7 @@ export default function AuthScreen() {
               <button key={m} type="button" onClick={() => { setMode(m); setError(""); setNotice(""); }}
                 style={{flex:1,padding:"9px 0",borderRadius:7,border:"none",fontSize:13,fontWeight:600,
                   background: mode===m ? "#12151a" : "transparent",color: mode===m ? "#e8e6e0" : "#6b7280"}}>
-                {m === "signin" ? "Sign in" : "Create account"}
+                {m === "signin" ? t.signIn : t.createAccount}
               </button>
             ))}
           </div>
@@ -65,23 +69,23 @@ export default function AuthScreen() {
 
         {mode === "reset" && (
           <div style={{marginBottom:20}}>
-            <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Reset password</div>
-            <div style={{fontSize:12,color:"#8a9199"}}>We'll email you a link to set a new password.</div>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>{t.resetPasswordTitle}</div>
+            <div style={{fontSize:12,color:"#8a9199"}}>{t.resetPasswordBody}</div>
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
           {mode === "signup" && (
-            <Field label="Your name">
+            <Field label={t.yourName}>
               <input value={name} onChange={e => setName(e.target.value)} required placeholder="e.g. Afsal" style={inputStyle} />
             </Field>
           )}
-          <Field label="Email">
+          <Field label={t.email}>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@example.com" style={inputStyle} />
           </Field>
 
           {mode !== "reset" && (
-            <Field label="Password">
+            <Field label={t.password}>
               <div style={{position:"relative"}}>
                 <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
                   required minLength={6} placeholder="At least 6 characters" style={{...inputStyle, paddingRight:40}} />
@@ -96,7 +100,7 @@ export default function AuthScreen() {
           {mode === "signin" && (
             <button type="button" onClick={() => { setMode("reset"); setError(""); setNotice(""); }}
               style={{background:"none",border:"none",color:"#c9a55c",fontSize:12,padding:0,marginBottom:16,display:"block"}}>
-              Forgot password?
+              {t.forgotPassword}
             </button>
           )}
 
@@ -104,20 +108,20 @@ export default function AuthScreen() {
           {notice && <div style={{color:"#6fcf97",fontSize:12,marginBottom:12}}>{notice}</div>}
 
           <button type="submit" disabled={busy} style={{width:"100%",padding:"12px 0",borderRadius:10,background:"#c9a55c",border:"none",color:"#12151a",fontWeight:700,fontSize:14,opacity:busy?0.6:1}}>
-            {busy ? "Working…" : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"}
+            {busy ? "…" : mode === "signin" ? t.signIn : mode === "signup" ? t.createAccount : t.sendResetLink}
           </button>
 
           {mode === "reset" && (
             <button type="button" onClick={() => { setMode("signin"); setError(""); setNotice(""); }}
               style={{width:"100%",background:"none",border:"none",color:"#8a9199",fontSize:12,marginTop:14}}>
-              Back to sign in
+              {t.backToSignIn}
             </button>
           )}
         </form>
 
         {mode !== "reset" && (
           <div style={{textAlign:"center",fontSize:11,color:"#4b5259",marginTop:20}} className="mono">
-            each account's entries are private, visible only to you
+            {t.privacyNote}
           </div>
         )}
       </div>
