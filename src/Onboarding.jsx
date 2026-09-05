@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp, PieChart, Lock, RotateCcw } from "lucide-react";
+import { TrendingUp, PieChart, Lock, RotateCcw, Users } from "lucide-react";
 import { useLang } from "./lib/LangContext";
 
 export default function Onboarding({ onDone }) {
@@ -11,6 +11,7 @@ export default function Onboarding({ onDone }) {
     { icon: <PieChart size={36} color="#c9a55c" />, title: t.onboard2Title, body: t.onboard2Body },
     { icon: <Lock size={36} color="#c9a55c" />, title: t.onboard3Title, body: t.onboard3Body },
     { icon: <RotateCcw size={36} color="#c9a55c" />, title: t.onboard4Title, body: t.onboard4Body },
+    { icon: <Users size={36} color="#c9a55c" />, title: t.onboard5Title, body: t.onboard5Body },
   ];
 
   const isLast = step === slides.length - 1;
@@ -46,4 +47,4 @@ export default function Onboarding({ onDone }) {
       </button>
     </div>
   );
-            }
+}
