@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, X, Trash2, Check, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { supabase } from "./lib/supabase";
+import { useLang } from "./lib/LangContext";
 
 function fmt(n) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n); }
 
 export default function Loans({ session }) {
+  const { t } = useLang();
   const [entries, setEntries] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -53,6 +55,7 @@ export default function Loans({ session }) {
     return (
       <PersonLedger
         person={person}
+        t={t}
         onBack={() => setOpenPerson(null)}
         onToggleSettled={toggleSettled}
         onDelete={deleteEntry}
@@ -61,7 +64,7 @@ export default function Loans({ session }) {
   }
 
   if (!loaded) {
-    return <div style={{padding:"32px 0",textAlign:"center",color:"#6b7280",fontSize:13}} className="mono">loading…</div>;
+    return <div style={{padding:"28px 0",textAlign:"center",color:"#6b7280",fontSize:13}} className="mono">loading…</div>;
   }
 
   const totalOwedToYou = people.reduce((s,p) => s + Math.max(p.balance, 0), 0);
@@ -69,80 +72,80 @@ export default function Loans({ session }) {
 
   return (
     <div className="fade-in">
-      {error && <div style={{color:"#e07856",fontSize:12,marginBottom:12}}>{error}</div>}
+      {error && <div style={{color:"#e07856",fontSize:12,marginBottom:16}}>{error}</div>}
 
-      <div style={{display:"flex",gap:10,marginBottom:20}}>
-        <div style={{flex:1,background:"#1a1e25",border:"1px solid #232830",borderRadius:12,padding:"14px 16px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:6,color:"#6fcf97",marginBottom:8}}><ArrowDownLeft size={16}/><span style={{fontSize:12,fontWeight:600,color:"#8a9199"}}>Owed to you</span></div>
-          <div className="mono" style={{fontSize:20,fontWeight:700,color:"#6fcf97"}}>{fmt(totalOwedToYou)}</div>
+      <div style={{display:"flex",gap:10,marginBottom:18}}>
+        <div style={{flex:1,background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"12px 14px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,color:"#6fcf97",marginBottom:8}}><ArrowDownLeft size={16}/><span style={{fontSize:12,fontWeight:600,color:"#8a9199"}}>{t.owedToYou}</span></div>
+          <div className="mono" style={{fontSize:18,fontWeight:700,color:"#6fcf97"}}>{fmt(totalOwedToYou)}</div>
         </div>
-        <div style={{flex:1,background:"#1a1e25",border:"1px solid #232830",borderRadius:12,padding:"14px 16px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:6,color:"#e07856",marginBottom:8}}><ArrowUpRight size={16}/><span style={{fontSize:12,fontWeight:600,color:"#8a9199"}}>You owe</span></div>
-          <div className="mono" style={{fontSize:20,fontWeight:700,color:"#e07856"}}>{fmt(totalYouOwe)}</div>
+        <div style={{flex:1,background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"12px 14px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,color:"#e07856",marginBottom:8}}><ArrowUpRight size={16}/><span style={{fontSize:12,fontWeight:600,color:"#8a9199"}}>{t.youOwe}</span></div>
+          <div className="mono" style={{fontSize:18,fontWeight:700,color:"#e07856"}}>{fmt(totalYouOwe)}</div>
         </div>
       </div>
 
       {people.length === 0 && (
-        <div style={{padding:"32px 0",textAlign:"center",color:"#6b7280",fontSize:13}}>
-          No borrow/lend entries yet.
+        <div style={{padding:"28px 0",textAlign:"center",color:"#6b7280",fontSize:13}}>
+          {t.noLoanEntries}
         </div>
       )}
 
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {people.map(p => (
           <button key={p.name} onClick={() => setOpenPerson(p.name)}
-            style={{textAlign:"left",background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            style={{textAlign:"left",background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div>
-              <div style={{fontSize:14,fontWeight:600,color:"#e8e6e0"}}>{p.name}</div>
-              <div className="mono" style={{fontSize:11,color:"#6b7280",marginTop:2}}>{p.entries.length} entr{p.entries.length===1?"y":"ies"}</div>
+              <div style={{fontSize:14,fontWeight:600,color:"#e8e6e0",marginBottom:4}}>{p.name}</div>
+              <div className="mono" style={{fontSize:11,color:"#6b7280"}}>{p.entries.length} {p.entries.length===1 ? t.entry : t.entries}</div>
             </div>
-            <div className="mono" style={{fontSize:14,fontWeight:700,color: p.balance === 0 ? "#6b7280" : p.balance > 0 ? "#6fcf97" : "#e07856"}}>
-              {p.balance === 0 ? "settled" : p.balance > 0 ? `+${fmt(p.balance)}` : `-${fmt(Math.abs(p.balance))}`}
+            <div className="mono" style={{fontSize:15,fontWeight:700,color: p.balance === 0 ? "#6b7280" : p.balance > 0 ? "#6fcf97" : "#e07856"}}>
+              {p.balance === 0 ? t.settled : p.balance > 0 ? `+${fmt(p.balance)}` : `-${fmt(Math.abs(p.balance))}`}
             </div>
           </button>
         ))}
       </div>
 
       <button onClick={() => setShowForm(true)}
-        style={{marginTop:16,width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"12px 0",borderRadius:10,background:"#1a1e25",border:"1px dashed #2a2f38",color:"#c9a55c",fontSize:13,fontWeight:600}}>
-        <Plus size={15}/> New entry
+        style={{marginTop:14,width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px 0",borderRadius:10,background:"#1a1e25",border:"1px dashed #2a2f38",color:"#c9a55c",fontSize:14,fontWeight:600}}>
+        <Plus size={16}/> {t.newEntry}
       </button>
 
-      {showForm && <LoanEntryForm onClose={() => setShowForm(false)} onSave={addEntry} existingNames={people.map(p => p.name)} />}
+      {showForm && <LoanEntryForm onClose={() => setShowForm(false)} onSave={addEntry} existingNames={people.map(p => p.name)} t={t} />}
     </div>
   );
 }
 
-function PersonLedger({ person, onBack, onToggleSettled, onDelete }) {
+function PersonLedger({ person, onBack, onToggleSettled, onDelete, t }) {
   const sorted = [...person.entries].sort((a,b) => b.date.localeCompare(a.date));
   return (
     <div className="fade-in">
-      <button onClick={onBack} style={{background:"none",border:"none",color:"#8a9199",fontSize:13,marginBottom:16,padding:0}}>← Back</button>
+      <button onClick={onBack} style={{background:"none",border:"none",color:"#8a9199",fontSize:13,marginBottom:14,padding:0}}>← {t.overview}</button>
 
-      <div style={{marginBottom:16}}>
-        <div style={{fontSize:18,fontWeight:700,color:"#e8e6e0"}} className="display">{person.name}</div>
-        <div className="mono" style={{fontSize:14,fontWeight:700,marginTop:4,color: person.balance === 0 ? "#6b7280" : person.balance > 0 ? "#6fcf97" : "#e07856"}}>
-          {person.balance === 0 ? "All settled" : person.balance > 0 ? `Owes you ${fmt(person.balance)}` : `You owe ${fmt(Math.abs(person.balance))}`}
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:17,fontWeight:700,color:"#e8e6e0",marginBottom:6}} className="display">{person.name}</div>
+        <div className="mono" style={{fontSize:15,fontWeight:700,color: person.balance === 0 ? "#6b7280" : person.balance > 0 ? "#6fcf97" : "#e07856"}}>
+          {person.balance === 0 ? t.allSettled : person.balance > 0 ? `${t.owesYou} ${fmt(person.balance)}` : `${t.youOwe} ${fmt(Math.abs(person.balance))}`}
         </div>
       </div>
 
-      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {sorted.map(e => (
           <div key={e.id} style={{background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"11px 14px",opacity: e.settled ? 0.5 : 1}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
               <div style={{minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:600}}>{e.direction === "lent" ? "You lent" : "You borrowed"}{e.note ? ` · ${e.note}` : ""}</div>
-                <div className="mono" style={{fontSize:11,color:"#6b7280"}}>{e.date}{e.settled ? " · settled" : ""}</div>
+                <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>{e.direction === "lent" ? t.youLent : t.youBorrowed}{e.note ? ` · ${e.note}` : ""}</div>
+                <div className="mono" style={{fontSize:11,color:"#6b7280"}}>{e.date}{e.settled ? ` · ${t.settled}` : ""}</div>
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                <span className="mono" style={{fontSize:13,fontWeight:600,color: e.direction === "lent" ? "#6fcf97" : "#e07856"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+                <span className="mono" style={{fontSize:14,fontWeight:600,color: e.direction === "lent" ? "#6fcf97" : "#e07856"}}>
                   {e.direction === "lent" ? "+" : "−"}{fmt(e.amount)}
                 </span>
                 <button onClick={() => onToggleSettled(e.id, e.settled)} title={e.settled ? "Mark unsettled" : "Mark settled"}
-                  style={{background:"none",border:"none",color: e.settled ? "#6fcf97" : "#6b7280",padding:4}}>
-                  <Check size={14}/>
+                  style={{background:"none",border:"none",color: e.settled ? "#6fcf97" : "#6b7280",padding:6}}>
+                  <Check size={15}/>
                 </button>
-                <button onClick={() => onDelete(e.id)} style={{background:"none",border:"none",color:"#6b7280",padding:4}}><Trash2 size={14}/></button>
+                <button onClick={() => onDelete(e.id)} style={{background:"none",border:"none",color:"#6b7280",padding:6}}><Trash2 size={15}/></button>
               </div>
             </div>
           </div>
@@ -152,7 +155,7 @@ function PersonLedger({ person, onBack, onToggleSettled, onDelete }) {
   );
 }
 
-function LoanEntryForm({ onClose, onSave, existingNames }) {
+function LoanEntryForm({ onClose, onSave, existingNames, t }) {
   const [personName, setPersonName] = useState("");
   const [direction, setDirection] = useState("lent");
   const [amount, setAmount] = useState("");
@@ -172,45 +175,45 @@ function LoanEntryForm({ onClose, onSave, existingNames }) {
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:50}}>
       <div className="fade-in" style={{background:"#1a1e25",border:"1px solid #232830",borderTopLeftRadius:16,borderTopRightRadius:16,width:"100%",maxWidth:480,padding:20,maxHeight:"90vh",overflowY:"auto"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-          <div style={{fontWeight:700,fontSize:15}}>New borrow/lend entry</div>
-          <button onClick={onClose} style={{background:"none",border:"none",color:"#6b7280"}}><X size={18}/></button>
+          <div style={{fontWeight:700,fontSize:15}}>{t.newLoanEntry}</div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"#6b7280",padding:4}}><X size={20}/></button>
         </div>
 
         <div style={{display:"flex",gap:8,marginBottom:16}}>
           <button type="button" onClick={() => setDirection("lent")}
             style={{flex:1,padding:"9px 0",borderRadius:8,border:"1px solid " + (direction==="lent" ? "#c9a55c" : "#2a2f38"),
-              background: direction==="lent" ? "rgba(201,165,92,0.12)" : "transparent",color: direction==="lent" ? "#c9a55c" : "#8a9199",fontWeight:600,fontSize:13}}>
-            You lent
+              background: direction==="lent" ? "rgba(201,165,92,0.12)" : "transparent",color: direction==="lent" ? "#c9a55c" : "#8a9199",fontWeight:600,fontSize:14}}>
+            {t.youLent}
           </button>
           <button type="button" onClick={() => setDirection("borrowed")}
             style={{flex:1,padding:"9px 0",borderRadius:8,border:"1px solid " + (direction==="borrowed" ? "#c9a55c" : "#2a2f38"),
-              background: direction==="borrowed" ? "rgba(201,165,92,0.12)" : "transparent",color: direction==="borrowed" ? "#c9a55c" : "#8a9199",fontWeight:600,fontSize:13}}>
-            You borrowed
+              background: direction==="borrowed" ? "rgba(201,165,92,0.12)" : "transparent",color: direction==="borrowed" ? "#c9a55c" : "#8a9199",fontWeight:600,fontSize:14}}>
+            {t.youBorrowed}
           </button>
         </div>
 
-        <Field label="Person's name">
+        <Field label={t.personName}>
           <input value={personName} onChange={e => setPersonName(e.target.value)} autoFocus placeholder="e.g. Rahul" style={inputStyle} list="loan-people" />
           <datalist id="loan-people">
             {existingNames.map(n => <option key={n} value={n} />)}
           </datalist>
         </Field>
 
-        <Field label="Amount">
+        <Field label={t.amount}>
           <input type="number" min="0" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" className="mono" style={inputStyle} />
         </Field>
 
-        <Field label="Note (optional)">
+        <Field label={t.note}>
           <input value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. for movie tickets" style={inputStyle} />
         </Field>
 
-        <Field label="Date">
+        <Field label={t.date}>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} className="mono" style={inputStyle} />
         </Field>
 
         <button onClick={handleSubmit} disabled={saving || !amount || !personName.trim()}
-          style={{width:"100%",padding:"13px 0",borderRadius:10,background:"#c9a55c",border:"none",color:"#12151a",fontWeight:700,fontSize:14,opacity:(saving || !amount || !personName.trim())?0.6:1}}>
-          {saving ? "Saving…" : "Add entry"}
+          style={{width:"100%",padding:"13px 0",borderRadius:10,background:"#c9a55c",border:"none",color:"#12151a",fontWeight:700,fontSize:14,opacity:(saving || !amount || !personName.trim())?0.6:1,marginTop:6}}>
+          {saving ? "…" : t.addEntry}
         </button>
       </div>
     </div>
@@ -226,4 +229,4 @@ function Field({ label, children }) {
   );
 }
 
-const inputStyle = { width:"100%",background:"#12151a",border:"1px solid #2a2f38",borderRadius:8,color:"#e8e6e0",padding:"10px 12px",fontSize:14 };
+const inputStyle = { width:"100%",background:"#12151a",border:"1px solid #2a2f38",borderRadius:10,color:"#e8e6e0",padding:"10px 12px",fontSize:14 };
