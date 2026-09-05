@@ -3,7 +3,10 @@ import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Download, FileText, X, 
 import { supabase } from "./lib/supabase";
 import { useLang } from "./lib/LangContext";
 import LangSwitch from "./LangSwitch.jsx";
+import InstallButton from "./InstallButton.jsx";
 import Events from "./Events.jsx";
+import Loans from "./Loans.jsx";
+import Help from "./Help.jsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -14,15 +17,22 @@ const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct"
 function monthKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; }
 function fmt(n) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n); }
 
-export default function Dashboard({ session }) {
+export default function Dashboard({ session, joinCode }) {
   const { t } = useLang();
   const [entries, setEntries] = useState([]);
   const [budgets, setBudgets] = useState({});
   const [loaded, setLoaded] = useState(false);
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState(joinCode ? "events" : "overview");
   const [selectedMonth, setSelectedMonth] = useState(monthKey(new Date()));
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (joinCode) {
+      const cleanUrl = window.location.pathname + window.location.search;
+      window.history.replaceState(null, "", cleanUrl);
+    }
+  }, [joinCode]);
 
   const displayName = session.user.user_metadata?.display_name || session.user.email;
 
@@ -141,6 +151,7 @@ export default function Dashboard({ session }) {
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <InstallButton />
           <LangSwitch />
           <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
             className="mono" style={{background:"#1a1e25",border:"1px solid #2a2f38",color:"#e8e6e0",padding:"8px 12px",borderRadius:8,fontSize:13}}>
@@ -160,7 +171,7 @@ export default function Dashboard({ session }) {
       )}
 
       <nav style={{display:"flex",gap:2,padding:"0 24px",borderBottom:"1px solid #232830"}}>
-        {[["overview",t.overview],["transactions",t.transactions],["budgets",t.budgets],["events","Events"]].map(([key,label]) => (
+        {[["overview",t.overview],["transactions",t.transactions],["budgets",t.budgets],["events",t.events],["loans",t.loans],["help","Help"]].map(([key,label]) => (
           <button key={key} onClick={() => setTab(key)}
             style={{padding:"12px 4px",marginRight:20,background:"none",border:"none",color: tab===key ? "#e8e6e0" : "#6b7280",
               borderBottom: tab===key ? "2px solid #c9a55c" : "2px solid transparent",fontSize:13,fontWeight:600}}>
@@ -263,10 +274,12 @@ export default function Dashboard({ session }) {
           </div>
         )}
 
-        {tab === "events" && <Events session={session} />}
+        {tab === "events" && <Events session={session} joinCode={joinCode} />}
+        {tab === "loans" && <Loans session={session} />}
+        {tab === "help" && <Help onBack={() => setTab("overview")} />}
       </main>
 
-      {tab !== "events" && <button onClick={() => setShowForm(true)}
+      {tab !== "events" && tab !== "loans" && tab !== "help" && <button onClick={() => setShowForm(true)}
         style={{position:"fixed",bottom:24,right:24,width:56,height:56,borderRadius:"50%",background:"#c9a55c",border:"none",
           display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(201,165,92,0.35)"}}>
         <Plus size={24} color="#12151a" />
