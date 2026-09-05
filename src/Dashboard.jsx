@@ -116,7 +116,7 @@ export default function Dashboard({ session, joinCode }) {
 
     const doc = new jsPDF();
     doc.setFontSize(16);
-    doc.text(`${t.appName} - Expenses`, 14, 18);
+    doc.text("KanakkuPetti - Expenses", 14, 18);
     doc.setFontSize(11);
     doc.setTextColor(100);
     doc.text(monthLabel, 14, 25);
@@ -133,7 +133,7 @@ export default function Dashboard({ session, joinCode }) {
       columnStylesFoot: { 3: { halign: "right" } },
     });
 
-    doc.save(`${t.appName}-expenses-${selectedMonth}.pdf`);
+    doc.save(`KanakkuPetti-expenses-${selectedMonth}.pdf`);
   }
 
   if (!loaded) {
@@ -142,7 +142,7 @@ export default function Dashboard({ session, joinCode }) {
 
   return (
     <div style={{minHeight:"100vh",background:"#12151a",color:"#e8e6e0"}}>
-      <header style={{borderBottom:"1px solid #232830",padding:"20px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+      <header style={{borderBottom:"1px solid #232830",padding:"16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{width:34,height:34,borderRadius:8,background:"#c9a55c",display:"flex",alignItems:"center",justifyContent:"center",color:"#12151a",fontWeight:800}}>₹</div>
           <div>
@@ -167,23 +167,23 @@ export default function Dashboard({ session, joinCode }) {
       </header>
 
       {error && (
-        <div style={{background:"rgba(224,120,86,0.1)",borderBottom:"1px solid rgba(224,120,86,0.3)",color:"#e07856",padding:"8px 24px",fontSize:12}}>{error}</div>
+        <div style={{background:"rgba(224,120,86,0.1)",borderBottom:"1px solid rgba(224,120,86,0.3)",color:"#e07856",padding:"8px 16px",fontSize:12}}>{error}</div>
       )}
 
-      <nav style={{display:"flex",gap:2,padding:"0 24px",borderBottom:"1px solid #232830"}}>
+      <nav style={{display:"flex",gap:4,padding:"0 16px",borderBottom:"1px solid #232830",overflowX:"auto"}}>
         {[["overview",t.overview],["transactions",t.transactions],["budgets",t.budgets],["events",t.events],["loans",t.loans],["help","Help"]].map(([key,label]) => (
           <button key={key} onClick={() => setTab(key)}
-            style={{padding:"12px 4px",marginRight:20,background:"none",border:"none",color: tab===key ? "#e8e6e0" : "#6b7280",
-              borderBottom: tab===key ? "2px solid #c9a55c" : "2px solid transparent",fontSize:13,fontWeight:600}}>
+            style={{padding:"14px 6px",marginRight:22,background:"none",border:"none",color: tab===key ? "#e8e6e0" : "#6b7280",
+              borderBottom: tab===key ? "2px solid #c9a55c" : "2px solid transparent",fontSize:13,fontWeight:600,whiteSpace:"nowrap",flexShrink:0}}>
             {label}
           </button>
         ))}
       </nav>
 
-      <main style={{padding:"24px",maxWidth:920,margin:"0 auto"}}>
+      <main style={{padding:"18px 16px",maxWidth:920,margin:"0 auto"}}>
         {tab === "overview" && (
           <div className="fade-in">
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:24}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10,marginBottom:20}}>
               <StatCard icon={<TrendingUp size={16}/>} label={t.income} value={fmt(monthIncome)} color="#6fcf97" />
               <StatCard icon={<TrendingDown size={16}/>} label={t.expenses} value={fmt(monthExpense)} color="#e07856" />
               <StatCard icon={<Wallet size={16}/>} label={t.net} value={fmt(netSavings)} color={netSavings>=0?"#6fcf97":"#e07856"} />
