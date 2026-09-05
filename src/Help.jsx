@@ -1,84 +1,232 @@
-import { Wallet, TrendingUp, PieChart, RotateCcw, Download, FileText, Users, HandCoins, Globe, Smartphone, Mail } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, X, Trash2, Check, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { supabase } from "./lib/supabase";
+import { useLang } from "./lib/LangContext";
 
-const sections = [
-  {
-    icon: TrendingUp,
-    title: "Income & Expenses",
-    body: "Tap the + button to log money coming in (income) or going out (expense). Pick a category, add an optional note, and choose the date. Your Overview tab shows totals for the selected month.",
-  },
-  {
-    icon: PieChart,
-    title: "Budgets",
-    body: "Go to the Budgets tab to set a monthly limit for any category — Food, Rent, Transport, etc. If you go over the limit, the Overview tab shows a warning and how much you're over by.",
-  },
-  {
-    icon: RotateCcw,
-    title: "Recurring entries",
-    body: "When adding an entry, toggle \"Repeats monthly on this day.\" Salary, rent, or any regular payment will be added automatically every month on the same date.",
-  },
-  {
-    icon: Download,
-    title: "CSV export",
-    body: "In the Transactions tab, tap \"Export all as CSV\" to download every entry you've ever logged as a spreadsheet file.",
-  },
-  {
-    icon: FileText,
-    title: "PDF export",
-    body: "Also in Transactions, \"Export PDF\" creates a clean, printable table of that month's expenses only, with a total at the bottom — good for sharing or record-keeping.",
-  },
-  {
-    icon: Users,
-    title: "Events (shared expenses)",
-    body: "Create an Event (like a trip or celebration) with an optional budget. Share the event's link with anyone — they can view it, and if you allow it, add their own expenses too. Great for splitting costs on a trip.",
-  },
-  {
-    icon: HandCoins,
-    title: "Loans (borrow & lend)",
-    body: "Track money you've borrowed from or lent to specific people. Each person gets a running balance so you always know who owes what. Mark entries as settled once paid back.",
-  },
-  {
-    icon: Globe,
-    title: "Language",
-    body: "Switch between English and Malayalam anytime using the language button near the top of the app.",
-  },
-  {
-    icon: Smartphone,
-    title: "Install as an app",
-    body: "Tap \"Install app\" near the top to add KanakkuPetti to your phone's home screen, so it opens like a regular app.",
-  },
-];
+function fmt(n) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n); }
 
-export default function Help({ onBack }) {
+export default function Loans({ session }) {
+  const { t } = useLang();
+  const [entries, setEntries] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [openPerson, setOpenPerson] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => { loadEntries(); }, []);
+
+  async function loadEntries() {
+    const { data, error } = await supabase.from("loan_entries").select("*").eq("user_id", session.user.id).order("date", { ascending: false });
+    if (error) setError(error.message);
+    setEntries(data || []);
+    setLoaded(true);
+  }
+
+  async function addEntry(entry) {
+    const { data, error } = await supabase.from("loan_entries").insert({ ...entry, user_id: session.user.id }).select().single();
+    if (error) { setError(error.message); return; }
+    setEntries(prev => [data, ...prev]);
+    setShowForm(false);
+  }
+
+  async function toggleSettled(id, current) {
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, settled: !current } : e));
+    await supabase.from("loan_entries").update({ settled: !current }).eq("id", id);
+  }
+
+  async function deleteEntry(id) {
+    setEntries(prev => prev.filter(e => e.id !== id));
+    await supabase.from("loan_entries").delete().eq("id", id);
+  }
+
+  const people = useMemo(() => {
+    const map = {};
+    entries.forEach(e => {
+      if (!map[e.person_name]) map[e.person_name] = { name: e.person_name, balance: 0, entries: [] };
+      const signed = e.direction === "lent" ? e.amount : -e.amount;
+      if (!e.settled) map[e.person_name].balance += Number(signed);
+      map[e.person_name].entries.push(e);
+    });
+    return Object.values(map).sort((a,b) => Math.abs(b.balance) - Math.abs(a.balance));
+  }, [entries]);
+
+  if (openPerson) {
+    const person = people.find(p => p.name === openPerson);
+    return (
+      <PersonLedger
+        person={person}
+        t={t}
+        onBack={() => setOpenPerson(null)}
+        onToggleSettled={toggleSettled}
+        onDelete={deleteEntry}
+      />
+    );
+  }
+
+  if (!loaded) {
+    return <div style={{padding:"28px 0",textAlign:"center",color:"#6b7280",fontSize:13}} className="mono">loading…</div>;
+  }
+
+  const totalOwedToYou = people.reduce((s,p) => s + Math.max(p.balance, 0), 0);
+  const totalYouOwe = people.reduce((s,p) => s + Math.max(-p.balance, 0), 0);
+
   return (
     <div className="fade-in">
-      <button onClick={onBack} style={{background:"none",border:"none",color:"#8a9199",fontSize:13,marginBottom:16,padding:0}}>← Back</button>
+      {error && <div style={{color:"#e07856",fontSize:12,marginBottom:16}}>{error}</div>}
 
-      <div style={{marginBottom:20}}>
-        <div className="display" style={{fontSize:20,fontWeight:700,color:"#e8e6e0"}}>Help & features</div>
-        <div style={{fontSize:13,color:"#8a9199",marginTop:4}}>Everything KanakkuPetti can do.</div>
+      <div style={{display:"flex",gap:10,marginBottom:18}}>
+        <div style={{flex:1,background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"12px 14px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,color:"#6fcf97",marginBottom:8}}><ArrowDownLeft size={16}/><span style={{fontSize:12,fontWeight:600,color:"#8a9199"}}>{t.owedToYou}</span></div>
+          <div className="mono" style={{fontSize:18,fontWeight:700,color:"#6fcf97"}}>{fmt(totalOwedToYou)}</div>
+        </div>
+        <div style={{flex:1,background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"12px 14px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,color:"#e07856",marginBottom:8}}><ArrowUpRight size={16}/><span style={{fontSize:12,fontWeight:600,color:"#8a9199"}}>{t.youOwe}</span></div>
+          <div className="mono" style={{fontSize:18,fontWeight:700,color:"#e07856"}}>{fmt(totalYouOwe)}</div>
+        </div>
       </div>
 
-      <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        {sections.map((s, i) => (
-          <div key={i} style={{background:"#1a1e25",border:"1px solid #232830",borderRadius:12,padding:"14px 16px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-              <div style={{width:32,height:32,borderRadius:8,background:"rgba(201,165,92,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <s.icon size={16} color="#c9a55c" />
-              </div>
-              <div style={{fontSize:14,fontWeight:600,color:"#e8e6e0"}}>{s.title}</div>
+      {people.length === 0 && (
+        <div style={{padding:"28px 0",textAlign:"center",color:"#6b7280",fontSize:13}}>
+          {t.noLoanEntries}
+        </div>
+      )}
+
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {people.map(p => (
+          <button key={p.name} onClick={() => setOpenPerson(p.name)}
+            style={{textAlign:"left",background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{fontSize:14,fontWeight:600,color:"#e8e6e0",marginBottom:4}}>{p.name}</div>
+              <div className="mono" style={{fontSize:11,color:"#6b7280"}}>{p.entries.length} {p.entries.length===1 ? t.entry : t.entries}</div>
             </div>
-            <div style={{fontSize:13,color:"#8a9199",lineHeight:1.6}}>{s.body}</div>
-          </div>
+            <div className="mono" style={{fontSize:15,fontWeight:700,color: p.balance === 0 ? "#6b7280" : p.balance > 0 ? "#6fcf97" : "#e07856"}}>
+              {p.balance === 0 ? t.settled : p.balance > 0 ? `+${fmt(p.balance)}` : `-${fmt(Math.abs(p.balance))}`}
+            </div>
+          </button>
         ))}
       </div>
 
-      <div style={{marginTop:24,padding:"18px 16px",background:"#1a1e25",border:"1px solid #232830",borderRadius:12,textAlign:"center"}}>
-        <div style={{fontSize:13,color:"#8a9199",marginBottom:10}}>Questions, bugs, or feedback?</div>
-        <a href="mailto:afsalabduljaleelmuhammad@gmail.com"
-          style={{display:"inline-flex",alignItems:"center",gap:6,color:"#c9a55c",fontSize:13,fontWeight:600,textDecoration:"none"}}>
-          <Mail size={14}/> afsalabduljaleelmuhammad@gmail.com
-        </a>
+      <button onClick={() => setShowForm(true)}
+        style={{marginTop:14,width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px 0",borderRadius:10,background:"#1a1e25",border:"1px dashed #2a2f38",color:"#c9a55c",fontSize:14,fontWeight:600}}>
+        <Plus size={16}/> {t.newEntry}
+      </button>
+
+      {showForm && <LoanEntryForm onClose={() => setShowForm(false)} onSave={addEntry} existingNames={people.map(p => p.name)} t={t} />}
+    </div>
+  );
+}
+
+function PersonLedger({ person, onBack, onToggleSettled, onDelete, t }) {
+  const sorted = [...person.entries].sort((a,b) => b.date.localeCompare(a.date));
+  return (
+    <div className="fade-in">
+      <button onClick={onBack} style={{background:"none",border:"none",color:"#8a9199",fontSize:13,marginBottom:14,padding:0}}>← {t.overview}</button>
+
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:17,fontWeight:700,color:"#e8e6e0",marginBottom:6}} className="display">{person.name}</div>
+        <div className="mono" style={{fontSize:15,fontWeight:700,color: person.balance === 0 ? "#6b7280" : person.balance > 0 ? "#6fcf97" : "#e07856"}}>
+          {person.balance === 0 ? t.allSettled : person.balance > 0 ? `${t.owesYou} ${fmt(person.balance)}` : `${t.youOwe} ${fmt(Math.abs(person.balance))}`}
+        </div>
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {sorted.map(e => (
+          <div key={e.id} style={{background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"11px 14px",opacity: e.settled ? 0.5 : 1}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>{e.direction === "lent" ? t.youLent : t.youBorrowed}{e.note ? ` · ${e.note}` : ""}</div>
+                <div className="mono" style={{fontSize:11,color:"#6b7280"}}>{e.date}{e.settled ? ` · ${t.settled}` : ""}</div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+                <span className="mono" style={{fontSize:14,fontWeight:600,color: e.direction === "lent" ? "#6fcf97" : "#e07856"}}>
+                  {e.direction === "lent" ? "+" : "−"}{fmt(e.amount)}
+                </span>
+                <button onClick={() => onToggleSettled(e.id, e.settled)} title={e.settled ? "Mark unsettled" : "Mark settled"}
+                  style={{background:"none",border:"none",color: e.settled ? "#6fcf97" : "#6b7280",padding:6}}>
+                  <Check size={15}/>
+                </button>
+                <button onClick={() => onDelete(e.id)} style={{background:"none",border:"none",color:"#6b7280",padding:6}}><Trash2 size={15}/></button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
-    }
+}
+
+function LoanEntryForm({ onClose, onSave, existingNames, t }) {
+  const [personName, setPersonName] = useState("");
+  const [direction, setDirection] = useState("lent");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0,10));
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit() {
+    const amt = Number(amount);
+    if (!amt || amt <= 0 || !personName.trim()) return;
+    setSaving(true);
+    await onSave({ person_name: personName.trim(), direction, amount: amt, note: note.trim(), date, settled: false });
+    setSaving(false);
+  }
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:50}}>
+      <div className="fade-in" style={{background:"#1a1e25",border:"1px solid #232830",borderTopLeftRadius:16,borderTopRightRadius:16,width:"100%",maxWidth:480,padding:20,maxHeight:"90vh",overflowY:"auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <div style={{fontWeight:700,fontSize:15}}>{t.newLoanEntry}</div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"#6b7280",padding:4}}><X size={20}/></button>
+        </div>
+
+        <div style={{display:"flex",gap:8,marginBottom:16}}>
+          <button type="button" onClick={() => setDirection("lent")}
+            style={{flex:1,padding:"9px 0",borderRadius:8,border:"1px solid " + (direction==="lent" ? "#c9a55c" : "#2a2f38"),
+              background: direction==="lent" ? "rgba(201,165,92,0.12)" : "transparent",color: direction==="lent" ? "#c9a55c" : "#8a9199",fontWeight:600,fontSize:14}}>
+            {t.youLent}
+          </button>
+          <button type="button" onClick={() => setDirection("borrowed")}
+            style={{flex:1,padding:"9px 0",borderRadius:8,border:"1px solid " + (direction==="borrowed" ? "#c9a55c" : "#2a2f38"),
+              background: direction==="borrowed" ? "rgba(201,165,92,0.12)" : "transparent",color: direction==="borrowed" ? "#c9a55c" : "#8a9199",fontWeight:600,fontSize:14}}>
+            {t.youBorrowed}
+          </button>
+        </div>
+
+        <Field label={t.personName}>
+          <input value={personName} onChange={e => setPersonName(e.target.value)} autoFocus placeholder="e.g. Rahul" style={inputStyle} list="loan-people" />
+          <datalist id="loan-people">
+            {existingNames.map(n => <option key={n} value={n} />)}
+          </datalist>
+        </Field>
+
+        <Field label={t.amount}>
+          <input type="number" min="0" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" className="mono" style={inputStyle} />
+        </Field>
+
+        <Field label={t.note}>
+          <input value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. for movie tickets" style={inputStyle} />
+        </Field>
+
+        <Field label={t.date}>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} className="mono" style={inputStyle} />
+        </Field>
+
+        <button onClick={handleSubmit} disabled={saving || !amount || !personName.trim()}
+          style={{width:"100%",padding:"13px 0",borderRadius:10,background:"#c9a55c",border:"none",color:"#12151a",fontWeight:700,fontSize:14,opacity:(saving || !amount || !personName.trim())?0.6:1,marginTop:6}}>
+          {saving ? "…" : t.addEntry}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div style={{marginBottom:14}}>
+      <div style={{fontSize:11,color:"#6b7280",marginBottom:6,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.03em"}}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
+const inputStyle = { width:"100%",background:"#12151a",border:"1px solid #2a2f38",borderRadius:10,color:"#e8e6e0",padding:"10px 12px",fontSize:14 };
