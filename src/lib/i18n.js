@@ -56,6 +56,20 @@ export const translations = {
     newVersionTitle: "New version available",
     newVersionBody: "KanakkuPetti has been updated. Refresh to get the latest version.",
     refreshNow: "Refresh now",
+    youLent: "You lent",
+    youBorrowed: "You borrowed",
+    personName: "Person's name",
+    noLoanEntries: "No borrow/lend entries yet.",
+    newLoanEntry: "New borrow/lend entry",
+    addEntry: "Add entry",
+    allSettled: "All settled",
+    owesYou: "Owes you",
+    entries: "entries",
+    entry: "entry",
+    settled: "settled",
+    helpTitle: "Help & features",
+    helpSubtitle: "Everything KanakkuPetti can do.",
+    helpContact: "Questions, bugs, or feedback?",
   },
   ml: {
     appName: "കണക്കുപെട്ടി",
@@ -114,9 +128,23 @@ export const translations = {
     newVersionTitle: "പുതിയ പതിപ്പ് ലഭ്യമാണ്",
     newVersionBody: "കണക്കുപെട്ടി അപ്ഡേറ്റ് ചെയ്തിട്ടുണ്ട്. ഏറ്റവും പുതിയ പതിപ്പ് ലഭിക്കാൻ റിഫ്രഷ് ചെയ്യൂ.",
     refreshNow: "ഇപ്പോൾ റിഫ്രഷ് ചെയ്യൂ",
+    youLent: "നിങ്ങൾ കൊടുത്തു",
+    youBorrowed: "നിങ്ങൾ വാങ്ങി",
+    personName: "വ്യക്തിയുടെ പേര്",
+    noLoanEntries: "ഇതുവരെ കടം എൻട്രികൾ ഇല്ല.",
+    newLoanEntry: "പുതിയ കടം എൻട്രി",
+    addEntry: "എൻട്രി ചേർക്കൂ",
+    allSettled: "എല്ലാം തീർത്തു",
+    owesYou: "നിങ്ങൾക്ക് തരാനുണ്ട്",
+    entries: "എൻട്രികൾ",
+    entry: "എൻട്രി",
+    settled: "തീർത്തു",
+    helpTitle: "സഹായവും ഫീച്ചറുകളും",
+    helpSubtitle: "കണക്കുപെട്ടിക്ക് ചെയ്യാൻ കഴിയുന്ന എല്ലാം.",
+    helpContact: "ചോദ്യങ്ങളോ അഭിപ്രായങ്ങളോ ഉണ്ടോ?",
   },
 };
 
 export function useTranslation(lang) {
   return translations[lang] || translations.en;
-}
+    }
