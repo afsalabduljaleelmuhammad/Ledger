@@ -7,6 +7,7 @@ import AuthScreen from "./AuthScreen.jsx";
 import Dashboard from "./Dashboard.jsx";
 import ResetPassword from "./ResetPassword.jsx";
 import UpdateAlert from "./UpdateAlert.jsx";
+import InstallPrompt from "./InstallPrompt.jsx";
 
 function getShareCodeFromHash() {
   const m = window.location.hash.match(/^#event\/([a-zA-Z0-9]+)/);
@@ -52,6 +53,7 @@ function AppInner() {
   return (
     <>
       <UpdateAlert />
+      <InstallPrompt />
       {session ? <Dashboard session={session} joinCode={joinCode} /> : <AuthScreen />}
     </>
   );
