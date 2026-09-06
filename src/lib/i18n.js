@@ -70,6 +70,14 @@ export const translations = {
     helpTitle: "Help & features",
     helpSubtitle: "Everything KanakkuPetti can do.",
     helpContact: "Questions, bugs, or feedback?",
+    cat_Food: "Food", cat_Transport: "Transport", cat_Rent: "Rent", cat_Utilities: "Utilities",
+    cat_Health: "Health", cat_Shopping: "Shopping", cat_Education: "Education",
+    cat_Entertainment: "Entertainment", cat_Other: "Other",
+    cat_Salary: "Salary", cat_Allowance: "Allowance", cat_Freelance: "Freelance", cat_Gift: "Gift",
+    deleteEvent: "Delete event",
+    confirmDeleteEvent: "Delete this event and all its expenses? This can't be undone.",
+    cancel: "Cancel",
+    exportPDF: "Export PDF",
   },
   ml: {
     appName: "കണക്കുപെട്ടി",
@@ -142,9 +150,17 @@ export const translations = {
     helpTitle: "സഹായവും ഫീച്ചറുകളും",
     helpSubtitle: "കണക്കുപെട്ടിക്ക് ചെയ്യാൻ കഴിയുന്ന എല്ലാം.",
     helpContact: "ചോദ്യങ്ങളോ അഭിപ്രായങ്ങളോ ഉണ്ടോ?",
+    cat_Food: "ഭക്ഷണം", cat_Transport: "യാത്ര", cat_Rent: "വാടക", cat_Utilities: "യൂട്ടിലിറ്റികൾ",
+    cat_Health: "ആരോഗ്യം", cat_Shopping: "ഷോപ്പിംഗ്", cat_Education: "വിദ്യാഭ്യാസം",
+    cat_Entertainment: "വിനോദം", cat_Other: "മറ്റുള്ളവ",
+    cat_Salary: "ശമ്പളം", cat_Allowance: "അലവൻസ്", cat_Freelance: "ഫ്രീലാൻസ്", cat_Gift: "സമ്മാനം",
+    deleteEvent: "ഇവന്റ് ഇല്ലാതാക്കുക",
+    confirmDeleteEvent: "ഈ ഇവന്റും അതിന്റെ എല്ലാ ചെലവുകളും ഇല്ലാതാക്കണോ? ഇത് തിരികെ ചെയ്യാൻ കഴിയില്ല.",
+    cancel: "റദ്ദാക്കുക",
+    exportPDF: "PDF എക്സ്പോർട്ട് ചെയ്യൂ",
   },
 };
 
 export function useTranslation(lang) {
   return translations[lang] || translations.en;
-    }
+}
