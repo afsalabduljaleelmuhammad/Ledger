@@ -1,11 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, X, Share2, Download, Trash2, Copy, Check, Eye, Pencil } from "lucide-react";
+import { Plus, X, Share2, Download, FileText, Trash2, Copy, Check, Eye, Pencil } from "lucide-react";
 import { supabase } from "./lib/supabase";
 import { useLang } from "./lib/LangContext";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const CATEGORIES = ["Food", "Transport", "Rent", "Utilities", "Health", "Shopping", "Education", "Entertainment", "Other"];
 
 function fmt(n) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n); }
+function catLabel(t, cat) { return t[`cat_${cat}`] || cat; }
 
 export default function Events({ session, joinCode }) {
   const { t } = useLang();
@@ -50,26 +53,35 @@ export default function Events({ session, joinCode }) {
 
   async function deleteEvent(id) {
     setOwnEvents(prev => prev.filter(e => e.id !== id));
+    setOpenEvent(null);
     const { error } = await supabase.from("events").delete().eq("id", id);
     if (error) setError(error.message);
   }
 
   if (openEvent) {
-    return <EventDetail event={openEvent} session={session} isOwner={openEvent.owner_id === session.user.id} onBack={() => { setOpenEvent(null); loadEvents(); }} />;
+    return (
+      <EventDetail
+        event={openEvent}
+        session={session}
+        isOwner={openEvent.owner_id === session.user.id}
+        onBack={() => { setOpenEvent(null); loadEvents(); }}
+        onDeleteEvent={deleteEvent}
+      />
+    );
   }
 
   if (!loaded) {
-    return <div style={{padding:"32px 0",textAlign:"center",color:"#6b7280",fontSize:13}} className="mono">loading…</div>;
+    return <div style={{padding:"28px 0",textAlign:"center",color:"#6b7280",fontSize:13}} className="mono">loading…</div>;
   }
 
   const allEvents = [...ownEvents, ...memberEvents];
 
   return (
     <div className="fade-in">
-      {error && <div style={{color:"#e07856",fontSize:12,marginBottom:12}}>{error}</div>}
+      {error && <div style={{color:"#e07856",fontSize:12,marginBottom:16}}>{error}</div>}
 
       {allEvents.length === 0 && (
-        <div style={{padding:"32px 0",textAlign:"center",color:"#6b7280",fontSize:13}}>
+        <div style={{padding:"28px 0",textAlign:"center",color:"#6b7280",fontSize:13}}>
           No events yet. Create one to track a trip or special occasion with others.
         </div>
       )}
@@ -77,7 +89,7 @@ export default function Events({ session, joinCode }) {
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {allEvents.map(ev => (
           <button key={ev.id} onClick={() => setOpenEvent(ev)}
-            style={{textAlign:"left",background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            style={{textAlign:"left",background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div>
               <div style={{fontSize:14,fontWeight:600,color:"#e8e6e0"}}>{ev.name}</div>
               <div className="mono" style={{fontSize:11,color:"#6b7280",marginTop:2}}>
@@ -90,8 +102,8 @@ export default function Events({ session, joinCode }) {
       </div>
 
       <button onClick={() => setShowCreate(true)}
-        style={{marginTop:16,width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"12px 0",borderRadius:10,background:"#1a1e25",border:"1px dashed #2a2f38",color:"#c9a55c",fontSize:13,fontWeight:600}}>
-        <Plus size={15}/> New event
+        style={{marginTop:14,width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px 0",borderRadius:10,background:"#1a1e25",border:"1px dashed #2a2f38",color:"#c9a55c",fontSize:14,fontWeight:600}}>
+        <Plus size={16}/> New event
       </button>
 
       {showCreate && <CreateEventForm onClose={() => setShowCreate(false)} onSave={createEvent} />}
@@ -157,7 +169,8 @@ function CreateEventForm({ onClose, onSave }) {
   );
 }
 
-function EventDetail({ event, session, isOwner, onBack }) {
+function EventDetail({ event, session, isOwner, onBack, onDeleteEvent }) {
+  const { t } = useLang();
   const [entries, setEntries] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -165,6 +178,7 @@ function EventDetail({ event, session, isOwner, onBack }) {
   const [joining, setJoining] = useState(false);
   const [isMember, setIsMember] = useState(isOwner);
   const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const canAdd = isOwner || (event.permission === "edit" && isMember);
 
@@ -218,7 +232,7 @@ function EventDetail({ event, session, isOwner, onBack }) {
 
   function exportCSV() {
     const rows = [["Date","Category","Amount","Note"]];
-    entries.forEach(e => rows.push([e.date, e.category, e.amount, e.note || ""]));
+    entries.forEach(e => rows.push([e.date, catLabel(t, e.category), e.amount, e.note || ""]));
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -227,19 +241,62 @@ function EventDetail({ event, session, isOwner, onBack }) {
     URL.revokeObjectURL(url);
   }
 
+  function exportPDF() {
+    const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(`KanakkuPetti - ${event.name}`, 14, 18);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+
+    autoTable(doc, {
+      startY: 26,
+      head: [["Date", "Category", "Note", "Amount (Rs.)"]],
+      body: sorted.map(e => [e.date, catLabel(t, e.category), e.note || "-", Number(e.amount).toLocaleString("en-IN")]),
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [201, 165, 92], textColor: [18, 21, 26] },
+      columnStyles: { 3: { halign: "right" } },
+      foot: [["", "", "Total", total.toLocaleString("en-IN")]],
+      footStyles: { fillColor: [26, 30, 37], textColor: [232, 230, 224], fontStyle: "bold" },
+    });
+
+    doc.save(`${event.name.replace(/\s+/g,"-")}.pdf`);
+  }
+
   const total = entries.reduce((s,e) => s+Number(e.amount), 0);
 
   return (
     <div className="fade-in">
-      <button onClick={onBack} style={{background:"none",border:"none",color:"#8a9199",fontSize:13,marginBottom:16,padding:0}}>← Back to events</button>
+      <button onClick={onBack} style={{background:"none",border:"none",color:"#8a9199",fontSize:13,marginBottom:14,padding:0}}>← Back to events</button>
 
-      <div style={{marginBottom:16}}>
-        <div style={{fontSize:18,fontWeight:700,color:"#e8e6e0"}} className="display">{event.name}</div>
-        {event.description && <div style={{fontSize:13,color:"#8a9199",marginTop:2}}>{event.description}</div>}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+        <div>
+          <div style={{fontSize:17,fontWeight:700,color:"#e8e6e0"}} className="display">{event.name}</div>
+          {event.description && <div style={{fontSize:13,color:"#8a9199",marginTop:2}}>{event.description}</div>}
+        </div>
+        {isOwner && (
+          <button onClick={() => setConfirmDelete(true)} style={{background:"none",border:"none",color:"#e07856",padding:6,flexShrink:0}}>
+            <Trash2 size={16}/>
+          </button>
+        )}
       </div>
 
+      {confirmDelete && (
+        <div style={{background:"#1a1e25",border:"1px solid #e07856",borderRadius:10,padding:14,marginBottom:14}}>
+          <div style={{fontSize:13,color:"#e8e6e0",marginBottom:12}}>{t.confirmDeleteEvent}</div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={() => setConfirmDelete(false)} style={{flex:1,padding:"9px 0",borderRadius:8,background:"none",border:"1px solid #2a2f38",color:"#8a9199",fontSize:13,fontWeight:600}}>
+              {t.cancel}
+            </button>
+            <button onClick={() => onDeleteEvent(event.id)} style={{flex:1,padding:"9px 0",borderRadius:8,background:"#e07856",border:"none",color:"#12151a",fontSize:13,fontWeight:600}}>
+              {t.deleteEvent}
+            </button>
+          </div>
+        </div>
+      )}
+
       {!isOwner && !isMember && (
-        <div style={{background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:14,marginBottom:16}}>
+        <div style={{background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:14,marginBottom:14}}>
           <div style={{fontSize:13,color:"#8a9199",marginBottom:10}}>You're viewing this event. Join to see it in your events list.</div>
           <button onClick={joinEvent} disabled={joining} style={{width:"100%",padding:"10px 0",borderRadius:8,background:"#c9a55c",border:"none",color:"#12151a",fontWeight:600,fontSize:13}}>
             {joining ? "Joining…" : "Join event"}
@@ -249,36 +306,36 @@ function EventDetail({ event, session, isOwner, onBack }) {
 
       {error && <div style={{color:"#e07856",fontSize:12,marginBottom:12}}>{error}</div>}
 
-      <div style={{display:"flex",gap:10,marginBottom:16}}>
+      <div style={{display:"flex",gap:10,marginBottom:14}}>
         <div style={{flex:1,background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"12px 14px"}}>
           <div style={{fontSize:11,color:"#8a9199",marginBottom:4}}>Total spent</div>
-          <div className="mono" style={{fontSize:18,fontWeight:700,color:"#c9a55c"}}>{fmt(total)}</div>
+          <div className="mono" style={{fontSize:17,fontWeight:700,color:"#c9a55c"}}>{fmt(total)}</div>
         </div>
         {event.budget && (
           <div style={{flex:1,background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"12px 14px"}}>
             <div style={{fontSize:11,color:"#8a9199",marginBottom:4}}>Budget</div>
-            <div className="mono" style={{fontSize:18,fontWeight:700,color: total>event.budget ? "#e07856" : "#e8e6e0"}}>{fmt(event.budget)}</div>
+            <div className="mono" style={{fontSize:17,fontWeight:700,color: total>event.budget ? "#e07856" : "#e8e6e0"}}>{fmt(event.budget)}</div>
           </div>
         )}
       </div>
 
       {isOwner && (
-        <button onClick={copyShareLink} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px 0",borderRadius:8,background:"#1a1e25",border:"1px solid #2a2f38",color:"#8a9199",fontSize:13,marginBottom:16}}>
+        <button onClick={copyShareLink} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px 0",borderRadius:8,background:"#1a1e25",border:"1px solid #2a2f38",color:"#8a9199",fontSize:13,marginBottom:14}}>
           {copied ? <><Check size={14} color="#6fcf97"/> Link copied</> : <><Share2 size={14}/> Share this event</>}
         </button>
       )}
 
       {!loaded ? (
-        <div style={{padding:"32px 0",textAlign:"center",color:"#6b7280",fontSize:13}} className="mono">loading…</div>
+        <div style={{padding:"28px 0",textAlign:"center",color:"#6b7280",fontSize:13}} className="mono">loading…</div>
       ) : (
         <>
-          {entries.length === 0 && <div style={{padding:"24px 0",textAlign:"center",color:"#6b7280",fontSize:13}}>No expenses logged yet.</div>}
+          {entries.length === 0 && <div style={{padding:"20px 0",textAlign:"center",color:"#6b7280",fontSize:13}}>No expenses logged yet.</div>}
           <div style={{display:"flex",flexDirection:"column",gap:6}}>
             {entries.map(e => (
               <div key={e.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"11px 14px"}}>
                 <div style={{minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.note || e.category}</div>
-                  <div className="mono" style={{fontSize:11,color:"#6b7280"}}>{e.date} · {e.category}</div>
+                  <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.note || catLabel(t, e.category)}</div>
+                  <div className="mono" style={{fontSize:11,color:"#6b7280"}}>{e.date} · {catLabel(t, e.category)}</div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
                   <span className="mono" style={{fontSize:13,fontWeight:600,color:"#e07856"}}>{fmt(e.amount)}</span>
@@ -291,9 +348,14 @@ function EventDetail({ event, session, isOwner, onBack }) {
           </div>
 
           {entries.length > 0 && (
-            <button onClick={exportCSV} style={{marginTop:16,display:"flex",alignItems:"center",gap:6,background:"none",border:"1px solid #2a2f38",color:"#8a9199",padding:"8px 14px",borderRadius:8,fontSize:12}}>
-              <Download size={13}/> Export event as CSV
-            </button>
+            <div style={{display:"flex",gap:8,marginTop:14}}>
+              <button onClick={exportCSV} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"1px solid #2a2f38",color:"#8a9199",padding:"8px 14px",borderRadius:8,fontSize:12}}>
+                <Download size={13}/> CSV
+              </button>
+              <button onClick={exportPDF} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"1px solid #2a2f38",color:"#8a9199",padding:"8px 14px",borderRadius:8,fontSize:12}}>
+                <FileText size={13}/> {t.exportPDF}
+              </button>
+            </div>
           )}
         </>
       )}
@@ -306,12 +368,12 @@ function EventDetail({ event, session, isOwner, onBack }) {
         </button>
       )}
 
-      {showForm && <EventEntryForm onClose={() => setShowForm(false)} onSave={addEntry} />}
+      {showForm && <EventEntryForm onClose={() => setShowForm(false)} onSave={addEntry} t={t} />}
     </div>
   );
 }
 
-function EventEntryForm({ onClose, onSave }) {
+function EventEntryForm({ onClose, onSave, t }) {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [note, setNote] = useState("");
@@ -340,7 +402,7 @@ function EventEntryForm({ onClose, onSave }) {
 
         <Field label="Category">
           <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
-            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            {CATEGORIES.map(c => <option key={c} value={c}>{catLabel(t, c)}</option>)}
           </select>
         </Field>
 
