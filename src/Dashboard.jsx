@@ -3,7 +3,6 @@ import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Download, FileText, X, 
 import { supabase } from "./lib/supabase";
 import { useLang } from "./lib/LangContext";
 import LangSwitch from "./LangSwitch.jsx";
-import InstallButton from "./InstallButton.jsx";
 import Events from "./Events.jsx";
 import Loans from "./Loans.jsx";
 import Help from "./Help.jsx";
@@ -16,6 +15,7 @@ const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct"
 
 function monthKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; }
 function fmt(n) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n); }
+function catLabel(t, cat) { return t[`cat_${cat}`] || cat; }
 
 export default function Dashboard({ session, joinCode }) {
   const { t } = useLang();
@@ -124,13 +124,12 @@ export default function Dashboard({ session, joinCode }) {
     autoTable(doc, {
       startY: 32,
       head: [["Date", "Category", "Note", "Amount (Rs.)"]],
-      body: monthExpenses.map(e => [e.date, e.category, e.note || "-", Number(e.amount).toLocaleString("en-IN")]),
+      body: monthExpenses.map(e => [e.date, catLabel(t, e.category), e.note || "-", Number(e.amount).toLocaleString("en-IN")]),
       styles: { fontSize: 9, cellPadding: 3 },
       headStyles: { fillColor: [201, 165, 92], textColor: [18, 21, 26] },
       columnStyles: { 3: { halign: "right" } },
       foot: [["", "", "Total", monthExpense.toLocaleString("en-IN")]],
       footStyles: { fillColor: [26, 30, 37], textColor: [232, 230, 224], fontStyle: "bold" },
-      columnStylesFoot: { 3: { halign: "right" } },
     });
 
     doc.save(`KanakkuPetti-expenses-${selectedMonth}.pdf`);
@@ -151,7 +150,6 @@ export default function Dashboard({ session, joinCode }) {
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <InstallButton />
           <LangSwitch />
           <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
             className="mono" style={{background:"#1a1e25",border:"1px solid #2a2f38",color:"#e8e6e0",padding:"8px 12px",borderRadius:8,fontSize:13}}>
@@ -206,7 +204,7 @@ export default function Dashboard({ session, joinCode }) {
                 return (
                   <div key={cat} style={{background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"12px 14px"}}>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}>
-                      <span style={{fontWeight:600}}>{cat}</span>
+                      <span style={{fontWeight:600}}>{catLabel(t, cat)}</span>
                       <span className="mono" style={{color: over ? "#e07856" : "#e8e6e0"}}>
                         {fmt(amt)}{budget ? ` / ${fmt(budget)}` : ""}
                       </span>
@@ -231,8 +229,8 @@ export default function Dashboard({ session, joinCode }) {
                   <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
                     <div style={{width:6,height:6,borderRadius:"50%",background:e.type==="income"?"#6fcf97":"#e07856",flexShrink:0}} />
                     <div style={{minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.note || e.category}</div>
-                      <div className="mono" style={{fontSize:11,color:"#6b7280"}}>{e.date} · {e.category}{e.recurring ? " · recurring" : ""}</div>
+                      <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.note || catLabel(t, e.category)}</div>
+                      <div className="mono" style={{fontSize:11,color:"#6b7280"}}>{e.date} · {catLabel(t, e.category)}{e.recurring ? " · recurring" : ""}</div>
                     </div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
@@ -261,7 +259,7 @@ export default function Dashboard({ session, joinCode }) {
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {CATEGORIES.map(cat => (
                 <div key={cat} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"10px 14px"}}>
-                  <span style={{fontSize:13,fontWeight:600}}>{cat}</span>
+                  <span style={{fontSize:13,fontWeight:600}}>{catLabel(t, cat)}</span>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
                     <span className="mono" style={{fontSize:13,color:"#6b7280"}}>₹</span>
                     <input type="number" min="0" placeholder="0" defaultValue={budgets[cat] || ""}
@@ -360,7 +358,7 @@ function EntryForm({ onClose, onSave, t }) {
 
         <Field label={t.category}>
           <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
-            {cats.map(c => <option key={c} value={c}>{c}</option>)}
+            {cats.map(c => <option key={c} value={c}>{catLabel(t, c)}</option>)}
           </select>
         </Field>
 
