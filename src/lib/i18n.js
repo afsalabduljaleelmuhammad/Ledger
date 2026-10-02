@@ -78,6 +78,7 @@ export const translations = {
     confirmDeleteEvent: "Delete this event and all its expenses? This can't be undone.",
     cancel: "Cancel",
     exportPDF: "Export PDF",
+    addNewCategory: "+ Add new category",
   },
   ml: {
     appName: "കണക്കുപെട്ടി",
@@ -158,6 +159,7 @@ export const translations = {
     confirmDeleteEvent: "ഈ ഇവന്റും അതിന്റെ എല്ലാ ചെലവുകളും ഇല്ലാതാക്കണോ? ഇത് തിരികെ ചെയ്യാൻ കഴിയില്ല.",
     cancel: "റദ്ദാക്കുക",
     exportPDF: "PDF എക്സ്പോർട്ട് ചെയ്യൂ",
+    addNewCategory: "+ പുതിയ വിഭാഗം ചേർക്കൂ",
   },
 };
 
