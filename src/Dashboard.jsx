@@ -6,6 +6,7 @@ import LangSwitch from "./LangSwitch.jsx";
 import Events from "./Events.jsx";
 import Loans from "./Loans.jsx";
 import Help from "./Help.jsx";
+import Categories from "./Categories.jsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -21,6 +22,7 @@ export default function Dashboard({ session, joinCode }) {
   const { t } = useLang();
   const [entries, setEntries] = useState([]);
   const [budgets, setBudgets] = useState({});
+  const [customCategories, setCustomCategories] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState(joinCode ? "events" : "overview");
   const [selectedMonth, setSelectedMonth] = useState(monthKey(new Date()));
@@ -39,17 +41,29 @@ export default function Dashboard({ session, joinCode }) {
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
-    const [{ data: e, error: eErr }, { data: b, error: bErr }] = await Promise.all([
+    const [{ data: e, error: eErr }, { data: b, error: bErr }, { data: cc, error: ccErr }] = await Promise.all([
       supabase.from("entries").select("*").order("date", { ascending: false }),
       supabase.from("budgets").select("*"),
+      supabase.from("custom_categories").select("*").eq("user_id", session.user.id).order("created_at"),
     ]);
-    if (eErr || bErr) setError((eErr || bErr).message);
+    if (eErr || bErr || ccErr) setError((eErr || bErr || ccErr).message);
     setEntries(e || []);
     const bMap = {};
     (b || []).forEach(row => { bMap[row.category] = row.amount; });
     setBudgets(bMap);
+    setCustomCategories(cc || []);
     setLoaded(true);
   }
+
+  const allExpenseCategories = useMemo(() => [
+    ...CATEGORIES,
+    ...customCategories.filter(c => c.type === "expense").map(c => c.name),
+  ], [customCategories]);
+
+  const allIncomeCategories = useMemo(() => [
+    ...INCOME_CATEGORIES,
+    ...customCategories.filter(c => c.type === "income").map(c => c.name),
+  ], [customCategories]);
 
   const months = useMemo(() => {
     const set = new Set(entries.map(e => e.date.slice(0,7)));
@@ -169,7 +183,7 @@ export default function Dashboard({ session, joinCode }) {
       )}
 
       <nav style={{display:"flex",gap:4,padding:"0 16px",borderBottom:"1px solid #232830",overflowX:"auto"}}>
-        {[["overview",t.overview],["transactions",t.transactions],["budgets",t.budgets],["events",t.events],["loans",t.loans],["help","Help"]].map(([key,label]) => (
+        {[["overview",t.overview],["transactions",t.transactions],["budgets",t.budgets],["categories","Categories"],["events",t.events],["loans",t.loans],["help","Help"]].map(([key,label]) => (
           <button key={key} onClick={() => setTab(key)}
             style={{padding:"14px 6px",marginRight:22,background:"none",border:"none",color: tab===key ? "#e8e6e0" : "#6b7280",
               borderBottom: tab===key ? "2px solid #c9a55c" : "2px solid transparent",fontSize:13,fontWeight:600,whiteSpace:"nowrap",flexShrink:0}}>
@@ -257,7 +271,7 @@ export default function Dashboard({ session, joinCode }) {
           <div className="fade-in">
             <div style={{fontSize:13,color:"#8a9199",marginBottom:12,fontWeight:600}}>{t.monthlyLimits}</div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {CATEGORIES.map(cat => (
+              {allExpenseCategories.map(cat => (
                 <div key={cat} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#1a1e25",border:"1px solid #232830",borderRadius:10,padding:"10px 14px"}}>
                   <span style={{fontSize:13,fontWeight:600}}>{catLabel(t, cat)}</span>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -272,18 +286,19 @@ export default function Dashboard({ session, joinCode }) {
           </div>
         )}
 
+        {tab === "categories" && <Categories session={session} onBack={() => { setTab("overview"); loadAll(); }} />}
         {tab === "events" && <Events session={session} joinCode={joinCode} />}
         {tab === "loans" && <Loans session={session} />}
         {tab === "help" && <Help onBack={() => setTab("overview")} />}
       </main>
 
-      {tab !== "events" && tab !== "loans" && tab !== "help" && <button onClick={() => setShowForm(true)}
+      {tab !== "events" && tab !== "loans" && tab !== "help" && tab !== "categories" && <button onClick={() => setShowForm(true)}
         style={{position:"fixed",bottom:24,right:24,width:56,height:56,borderRadius:"50%",background:"#c9a55c",border:"none",
           display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(201,165,92,0.35)"}}>
         <Plus size={24} color="#12151a" />
       </button>}
 
-      {showForm && <EntryForm onClose={() => setShowForm(false)} onSave={addEntry} t={t} />}
+      {showForm && <EntryForm onClose={() => setShowForm(false)} onSave={addEntry} t={t} expenseCats={allExpenseCategories} incomeCats={allIncomeCategories} />}
     </div>
   );
 }
@@ -314,16 +329,16 @@ function EmptyNote({ text }) {
   return <div style={{padding:"32px 0",textAlign:"center",color:"#6b7280",fontSize:13}}>{text}</div>;
 }
 
-function EntryForm({ onClose, onSave, t }) {
+function EntryForm({ onClose, onSave, t, expenseCats, incomeCats }) {
   const [type, setType] = useState("expense");
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState(expenseCats[0]);
   const [note, setNote] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0,10));
   const [recurring, setRecurring] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const cats = type === "income" ? INCOME_CATEGORIES : CATEGORIES;
+  const cats = type === "income" ? incomeCats : expenseCats;
 
   async function handleSubmit() {
     const amt = Number(amount);
@@ -343,7 +358,7 @@ function EntryForm({ onClose, onSave, t }) {
 
         <div style={{display:"flex",gap:8,marginBottom:16}}>
           {["expense","income"].map(ty => (
-            <button key={ty} onClick={() => { setType(ty); setCategory(ty==="income"?INCOME_CATEGORIES[0]:CATEGORIES[0]); }}
+            <button key={ty} onClick={() => { setType(ty); setCategory(ty==="income"?incomeCats[0]:expenseCats[0]); }}
               style={{flex:1,padding:"9px 0",borderRadius:8,border:"1px solid " + (type===ty ? "#c9a55c" : "#2a2f38"),
                 background: type===ty ? "rgba(201,165,92,0.12)" : "transparent",color: type===ty ? "#c9a55c" : "#8a9199",fontWeight:600,fontSize:13,textTransform:"capitalize"}}>
               {ty === "income" ? t.income : t.expenses}
