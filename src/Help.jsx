@@ -1,10 +1,11 @@
-import { Wallet, TrendingUp, PieChart, RotateCcw, Download, FileText, Users, HandCoins, Globe, Smartphone, Mail } from "lucide-react";
+import { Wallet, TrendingUp, PieChart, RotateCcw, Download, FileText, Users, HandCoins, Globe, Smartphone, Mail, Tag } from "lucide-react";
 import { useLang } from "./lib/LangContext";
 
 const sectionsByLang = {
   en: [
     { icon: TrendingUp, title: "Income & Expenses", body: "Tap the + button to log money coming in (income) or going out (expense). Pick a category, add an optional note, and choose the date. Your Overview tab shows totals for the selected month." },
     { icon: PieChart, title: "Budgets", body: "Go to the Budgets tab to set a monthly limit for any category — Food, Rent, Transport, etc. If you go over the limit, the Overview tab shows a warning and how much you're over by." },
+    { icon: Tag, title: "Custom categories", body: "Go to the Categories tab to add your own categories beyond the defaults. They show up everywhere you pick a category — entries, budgets, and events." },
     { icon: RotateCcw, title: "Recurring entries", body: "When adding an entry, toggle \"Repeats monthly on this day.\" Salary, rent, or any regular payment will be added automatically every month on the same date." },
     { icon: Download, title: "CSV export", body: "In the Transactions tab, tap \"Export all as CSV\" to download every entry you've ever logged as a spreadsheet file." },
     { icon: FileText, title: "PDF export", body: "Also in Transactions, \"Export PDF\" creates a clean, printable table of that month's expenses only, with a total at the bottom — good for sharing or record-keeping." },
@@ -16,6 +17,7 @@ const sectionsByLang = {
   ml: [
     { icon: TrendingUp, title: "വരവും ചെലവും", body: "വരുന്ന പണം (വരവ്) അല്ലെങ്കിൽ പോകുന്ന പണം (ചെലവ്) രേഖപ്പെടുത്താൻ + ബട്ടൺ അമർത്തുക. ഒരു വിഭാഗം തിരഞ്ഞെടുക്കുക, ഒരു കുറിപ്പ് ചേർക്കുക, തീയതി തിരഞ്ഞെടുക്കുക. തിരഞ്ഞെടുത്ത മാസത്തിലെ ആകെ തുക അവലോകനം ടാബിൽ കാണാം." },
     { icon: PieChart, title: "ബഡ്ജറ്റുകൾ", body: "ഏതെങ്കിലും വിഭാഗത്തിന് ഒരു മാസ പരിധി വെക്കാൻ ബഡ്ജറ്റുകൾ ടാബിലേക്ക് പോകുക — ഭക്ഷണം, വാടക, യാത്ര മുതലായവ. പരിധി കടന്നാൽ, അവലോകനം ടാബ് ഒരു മുന്നറിയിപ്പ് കാണിക്കും." },
+    { icon: Tag, title: "ഇഷ്ടാനുസൃത വിഭാഗങ്ങൾ", body: "ഡിഫോൾട്ടിനപ്പുറം സ്വന്തം വിഭാഗങ്ങൾ ചേർക്കാൻ Categories ടാബിലേക്ക് പോകുക. എൻട്രികൾ, ബഡ്ജറ്റുകൾ, ഇവന്റുകൾ എന്നിവിടങ്ങളിലെല്ലാം അവ കാണാം." },
     { icon: RotateCcw, title: "ആവർത്തന എൻട്രികൾ", body: "ഒരു എൻട്രി ചേർക്കുമ്പോൾ \"ഈ ദിവസം എല്ലാ മാസവും ആവർത്തിക്കും\" എന്നത് ഓണാക്കുക. ശമ്പളം, വാടക, അല്ലെങ്കിൽ ഏതെങ്കിലും സ്ഥിരം പേയ്‌മെന്റ് എല്ലാ മാസവും ഒരേ തീയതിയിൽ സ്വയമേവ ചേർക്കപ്പെടും." },
     { icon: Download, title: "CSV എക്സ്പോർട്ട്", body: "ഇടപാടുകൾ ടാബിൽ, നിങ്ങൾ രേഖപ്പെടുത്തിയ എല്ലാ എൻട്രികളും ഒരു സ്പ്രെഡ്ഷീറ്റ് ഫയലായി ഡൗൺലോഡ് ചെയ്യാൻ \"എല്ലാം CSV ആയി എക്സ്പോർട്ട് ചെയ്യൂ\" അമർത്തുക." },
     { icon: FileText, title: "PDF എക്സ്പോർട്ട്", body: "ഇടപാടുകളിൽ തന്നെ, \"Export PDF\" ആ മാസത്തെ ചെലവുകൾ മാത്രം ഉള്ള ഒരു വൃത്തിയുള്ള, പ്രിന്റ് ചെയ്യാവുന്ന ടേബിൾ ഉണ്ടാക്കും, താഴെ ആകെ തുകയോടെ." },
@@ -59,6 +61,10 @@ export default function Help({ onBack }) {
           style={{display:"inline-flex",alignItems:"center",gap:6,color:"#c9a55c",fontSize:13,fontWeight:600,textDecoration:"none"}}>
           <Mail size={15}/> afsalabduljaleelmuhammad@gmail.com
         </a>
+      </div>
+
+      <div style={{textAlign:"center",fontSize:11,color:"#4b5259",marginTop:16}} className="mono">
+        Made by Afsal Abdul Jaleel Muhammad
       </div>
     </div>
   );
