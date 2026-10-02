@@ -297,9 +297,10 @@ export default function Dashboard({ session, joinCode }) {
           display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(201,165,92,0.35)"}}>
         <Plus size={24} color="#12151a" />
       </button>}
-
-      {showForm && <EntryForm onClose={() => setShowForm(false)} onSave={addEntry} t={t} expenseCats={allExpenseCategories} incomeCats={allIncomeCategories} />}
-    </div>
+     {showForm && <EntryForm onClose={() => setShowForm(false)} onSave={addEntry} t={t}
+  expenseCats={allExpenseCategories} incomeCats={allIncomeCategories}
+  onManageCategories={() => { setShowForm(false); setTab("categories"); }} />}
+        </div>
   );
 }
 
@@ -329,7 +330,7 @@ function EmptyNote({ text }) {
   return <div style={{padding:"32px 0",textAlign:"center",color:"#6b7280",fontSize:13}}>{text}</div>;
 }
 
-function EntryForm({ onClose, onSave, t, expenseCats, incomeCats }) {
+function EntryForm({ onClose, onSave, t, expenseCats, incomeCats, onManageCategories }) {
   const [type, setType] = useState("expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(expenseCats[0]);
@@ -372,10 +373,14 @@ function EntryForm({ onClose, onSave, t, expenseCats, incomeCats }) {
         </Field>
 
         <Field label={t.category}>
-          <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
-            {cats.map(c => <option key={c} value={c}>{catLabel(t, c)}</option>)}
-          </select>
-        </Field>
+  <select value={category} onChange={e => {
+    if (e.target.value === "__add__") { onManageCategories(); return; }
+    setCategory(e.target.value);
+  }} style={inputStyle}>
+    {cats.map(c => <option key={c} value={c}>{catLabel(t, c)}</option>)}
+    <option value="__add__">{t.addNewCategory}</option>
+  </select>
+</Field>
 
         <Field label={t.note}>
           <input value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. groceries at store" style={inputStyle} />
