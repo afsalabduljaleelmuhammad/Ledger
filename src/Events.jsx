@@ -379,7 +379,7 @@ function EventDetail({ event, session, isOwner, onBack, onDeleteEvent, categorie
   );
 }
 
-function EventEntryForm({ onClose, onSave, t, categories }) {
+function EventEntryForm({ onClose, onSave, t, expenseCats, incomeCats, onManageCategories }) {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(categories[0]);
   const [note, setNote] = useState("");
@@ -406,11 +406,15 @@ function EventEntryForm({ onClose, onSave, t, categories }) {
           <input type="number" min="0" autoFocus value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" className="mono" style={inputStyle} />
         </Field>
 
-        <Field label="Category">
-          <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
-            {categories.map(c => <option key={c} value={c}>{catLabel(t, c)}</option>)}
-          </select>
-        </Field>
+        <Field label={t.category}>
+  <select value={category} onChange={e => {
+    if (e.target.value === "__add__") { onManageCategories(); return; }
+    setCategory(e.target.value);
+  }} style={inputStyle}>
+    {cats.map(c => <option key={c} value={c}>{catLabel(t, c)}</option>)}
+    <option value="__add__">{t.addNewCategory}</option>
+  </select>
+</Field>
 
         <Field label="Note (optional)">
           <input value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. lunch at hotel" style={inputStyle} />
