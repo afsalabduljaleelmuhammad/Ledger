@@ -14,6 +14,7 @@ export default function Events({ session, joinCode }) {
   const { t } = useLang();
   const [ownEvents, setOwnEvents] = useState([]);
   const [memberEvents, setMemberEvents] = useState([]);
+  const [customCategories, setCustomCategories] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [openEvent, setOpenEvent] = useState(null);
@@ -35,9 +36,11 @@ export default function Events({ session, joinCode }) {
   async function loadEvents() {
     const { data: owned, error: e1 } = await supabase.from("events").select("*").eq("owner_id", session.user.id).order("created_at", { ascending: false });
     const { data: memberships, error: e2 } = await supabase.from("event_members").select("event_id, events(*)").eq("user_id", session.user.id);
-    if (e1 || e2) setError((e1 || e2).message);
+    const { data: cc, error: e3 } = await supabase.from("custom_categories").select("*").eq("user_id", session.user.id).eq("type", "expense");
+    if (e1 || e2 || e3) setError((e1 || e2 || e3).message);
     setOwnEvents(owned || []);
     setMemberEvents((memberships || []).map(m => m.events).filter(ev => ev && ev.owner_id !== session.user.id));
+    setCustomCategories((cc || []).map(c => c.name));
     setLoaded(true);
   }
 
@@ -58,12 +61,15 @@ export default function Events({ session, joinCode }) {
     if (error) setError(error.message);
   }
 
+  const allCategories = useMemo(() => [...CATEGORIES, ...customCategories], [customCategories]);
+
   if (openEvent) {
     return (
       <EventDetail
         event={openEvent}
         session={session}
         isOwner={openEvent.owner_id === session.user.id}
+        categories={allCategories}
         onBack={() => { setOpenEvent(null); loadEvents(); }}
         onDeleteEvent={deleteEvent}
       />
@@ -169,7 +175,7 @@ function CreateEventForm({ onClose, onSave }) {
   );
 }
 
-function EventDetail({ event, session, isOwner, onBack, onDeleteEvent }) {
+function EventDetail({ event, session, isOwner, onBack, onDeleteEvent, categories }) {
   const { t } = useLang();
   const [entries, setEntries] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -368,14 +374,14 @@ function EventDetail({ event, session, isOwner, onBack, onDeleteEvent }) {
         </button>
       )}
 
-      {showForm && <EventEntryForm onClose={() => setShowForm(false)} onSave={addEntry} t={t} />}
+      {showForm && <EventEntryForm onClose={() => setShowForm(false)} onSave={addEntry} t={t} categories={categories} />}
     </div>
   );
 }
 
-function EventEntryForm({ onClose, onSave, t }) {
+function EventEntryForm({ onClose, onSave, t, categories }) {
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState(categories[0]);
   const [note, setNote] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0,10));
   const [saving, setSaving] = useState(false);
@@ -402,7 +408,7 @@ function EventEntryForm({ onClose, onSave, t }) {
 
         <Field label="Category">
           <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
-            {CATEGORIES.map(c => <option key={c} value={c}>{catLabel(t, c)}</option>)}
+            {categories.map(c => <option key={c} value={c}>{catLabel(t, c)}</option>)}
           </select>
         </Field>
 
